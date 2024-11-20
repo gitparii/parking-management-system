@@ -1,17 +1,14 @@
 const express=require("express");
-
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const mongoose = require('mongoose');
-
 const connectDb=require("./config/dbConnection");
-
 const errorHandler = require("./middlewares/errorhandler");
-
 const userRoutes = require('./routes/userRoutes');
-
-
+const parkingRoutes=require('./routes/parkingRoutes');
 const dotenv = require("dotenv");
+
+
 dotenv.config();
 
 const app=express();
@@ -26,6 +23,10 @@ app.use(cors());
 
 // Routes
 app.use('/api', userRoutes);
+// Use the parking routes
+app.use('/api/parking', parkingRoutes);
+
+
 
 app.get('/',(req,res) => {
     res.send("working");
