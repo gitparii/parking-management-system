@@ -1,4 +1,6 @@
 const User = require('../models/userModel');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken')
 
 // Register a new user
 const registerUser = async (req, res) => {
@@ -39,57 +41,26 @@ const getAllUsers = async (req, res) => {
 };
 
 // Export controller functions
-module.exports = { registerUser, getAllUsers };
 
-//FOR PARKING SPACE 
+const login = async (req, res) => {
+  const { email, password } = req.body;
 
-// // // Get all parking slots
-// const getAllParkingSlots = async (req, res) => {
-//   try {
-//     const parkingSlots = await ParkingSlot.find();
-//     res.status(200).json(parkingSlots);
-//   } catch (err) {
-//     res.status(500).json({ error: 'Error fetching parking slots' });
-//   }
-// };
+  // Find user by email
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(400).json({ message: 'User  not found' });
+  }
 
-// // Update a parking slot status
-// const updateParkingSlot = async (req, res) => {
-//   const { id } = req.params; // Slot ID
-//   const { status } = req.body;
+  // Validate password
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (isMatch) {
+    return res.status(400).json({ message: 'Invalid credentials' });
+  }
 
-//   try {
-//     const parkingSlot = await ParkingSlot.findOneAndUpdate(
-//       { 'slots._id': id },
-//       { $set: { 'slots.$.status': status } },
-//       { new: true }
-//     );
+  // Generate JWT token
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+  res.status(200).json({ token });
+};
 
-//     if (!parkingSlot) {
-//       return res.status(404).json({ error: 'Slot not found' });
-//     }
 
-//     res.status(200).json(parkingSlot);
-//   } catch (err) {
-//     res.status(500).json({ error: 'Error updating parking slot' });
-//   }
-// };
-
-// // Create parking slots (initial setup)
-// const createParkingSlots = async (req, res) => {
-//   const { type, slots } = req.body;
-
-//   try {
-//     const newParkingSlot = new ParkingSlot({ type, slots });
-//     await newParkingSlot.save();
-//     res.status(201).json(newParkingSlot);
-//   } catch (err) {
-//     res.status(500).json({ error: 'Error creating parking slots' });
-//   }
-// };
-
-// module.exports = {
-//   getAllParkingSlots,
-//   updateParkingSlot,
-//   createParkingSlots,
-// };
+module.exports = { registerUser, getAllUsers , login };
