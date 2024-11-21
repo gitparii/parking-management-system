@@ -1,11 +1,15 @@
 const express = require('express');
+const { registerVehicle, exitVehicle, getParkingStatus } = require('../controller/parkingController');
+
 const router = express.Router();
-const parkingController = require('../controller/parkingController');
 
-// Route to check parking space availability
-router.get('/check-availability', parkingController.checkAvailability);
+// Register a vehicle
+router.post('/register', registerVehicle);
 
-// Route to register a vehicle
-router.post('/register', parkingController.registerVehicle);
+// Exit a vehicle
+router.post('/exit', exitVehicle);
+
+// Get parking status
+router.get('/status', getParkingStatus);
 
 module.exports = router;

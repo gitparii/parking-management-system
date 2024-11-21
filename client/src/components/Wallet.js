@@ -6,7 +6,7 @@ const Wallet = () => {
 
     return (
         <div>
-            <div>
+            <div >
                 <h1>Wallet</h1>
             </div>
             <div>

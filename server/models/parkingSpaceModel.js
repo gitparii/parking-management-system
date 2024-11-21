@@ -1,22 +1,42 @@
 const mongoose = require('mongoose');
 
-// Parking Space Schema
-const ParkingSpaceSchema = new mongoose.Schema({
-  spaceId: { 
-    type: Number, 
-    required: true, 
-    unique: true 
-  },
-  isOccupied: {
-    type: Boolean, 
-    default: false 
-  },
-  vehicleId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Vehicle',  // Reference to Vehicle model
-    default: null,
-  },
+const vehicleSchema = new mongoose.Schema({
+    licensePlate: { 
+        type: String, 
+        required: true, 
+        unique: true 
+    },
+    owner: { 
+        type: String, 
+        required: true 
+    },
+    plotNumber: { 
+        type: Number, 
+        required: true 
+    },
+    vehicleType: { 
+        type: String, 
+        enum: ['Car', 'Bike', 'Truck','car','bike','truck'], 
+        required: true 
+    },
+    fuelType: { 
+        type: String, 
+        enum: ['Petrol', 'Diesel', 'Electric', 'Hybrid', 'petrol', 'diesel', 'electric', 'hybrid'], 
+        required: true 
+    },
 });
 
-// Export the ParkingSpace model
-module.exports = mongoose.model('ParkingSpace', ParkingSpaceSchema);
+const parkingSchema = new mongoose.Schema({
+    totalSpots: { type: Number, default: 10 },
+    slots: [
+        {
+            number: { type: Number, required: true },
+            status: { type: String, enum: ['empty', 'reserved'], default: 'empty' },
+        },
+    ],
+    vehicles: [vehicleSchema],
+});
+
+const Parking = mongoose.model('Parking', parkingSchema);
+
+module.exports = Parking;

@@ -1,64 +1,94 @@
-const Vehicle = require('../models/vehicleModel');
-const ParkingSpace = require('../models/parkingSpaceModel');
+const Parking = require('../models/parkingSpaceModel');
 
-// API to check availability of parking spaces
-exports.checkAvailability = async (req, res) => {
-  try {
-    const availableSpace = await ParkingSpace.findOne({ isOccupied: false });
-    if (!availableSpace) {
-      return res.status(404).json({ message: 'No available parking spaces.' });
+// Register a vehicle and reserve a slot
+const registerVehicle = async (req, res) => {
+    try {
+        const { licensePlate, owner, vehicleType, fuelType } = req.body;
+
+        const parking = await Parking.findOne();
+        if (!parking) return res.status(404).json({ message: 'Parking lot not initialized.' });
+
+        // Check for available slots
+        const availableSlot = parking.slots.find(slot => slot.status === 'empty');
+        if (!availableSlot) {
+            return res.status(400).json({ message: 'No empty parking slots available.' });
+        }
+
+        // Check if vehicle is already registered
+        const existingVehicle = parking.vehicles.find(v => v.licensePlate === licensePlate);
+        if (existingVehicle) {
+            return res.status(400).json({ message: 'Vehicle already registered.' });
+        }
+
+        // Reserve the slot and register the vehicle
+        availableSlot.status = 'reserved';
+        const newVehicle = {
+            licensePlate,
+            owner,
+            plotNumber: availableSlot.number,
+            vehicleType,
+            fuelType,
+        };
+        parking.vehicles.push(newVehicle);
+
+        await parking.save();
+        res.status(201).json({
+            message: `Vehicle registered and slot ${availableSlot.number} reserved.`,
+            vehicle: newVehicle,
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error.', error: error.message });
     }
-
-    res.json({
-      message: 'Parking space available.',
-      parkingSpace: availableSpace,
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Error checking parking space availability', error: err });
-  }
 };
 
-// API to register a vehicle
-exports.registerVehicle = async (req, res) => {
-  try {
-    const { vehicleId, registrationNumber, vehicleType } = req.body;
+// Exit a vehicle and free up its slot
+const exitVehicle = async (req, res) => {
+    try {
+        const { licensePlate } = req.body;
 
-    // Check if vehicle already exists
-    const existingVehicle = await Vehicle.findOne({ vehicleId });
-    if (existingVehicle) {
-      return res.status(400).json({ message: 'Vehicle already registered!' });
+        const parking = await Parking.findOne();
+        if (!parking) return res.status(404).json({ message: 'Parking lot not initialized.' });
+
+        // Find the vehicle
+        const vehicleIndex = parking.vehicles.findIndex(v => v.licensePlate === licensePlate);
+        if (vehicleIndex === -1) {
+            return res.status(400).json({ message: 'Vehicle not found in the parking lot.' });
+        }
+
+        // Free up the parking slot
+        const plotNumber = parking.vehicles[vehicleIndex].plotNumber;
+        const slot = parking.slots.find(slot => slot.number === plotNumber);
+        if (slot) slot.status = 'empty';
+
+        // Remove the vehicle from the list
+        parking.vehicles.splice(vehicleIndex, 1);
+
+        await parking.save();
+        res.status(200).json({ message: `Vehicle with license plate ${licensePlate} exited. Slot ${plotNumber} is now empty.` });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error.', error: error.message });
     }
+};
 
-    // Create a new vehicle instance
-    const newVehicle = new Vehicle({
-      vehicleId,
-      registrationNumber,
-      vehicleType,
-    });
+// Get current parking status
+const getParkingStatus = async (req, res) => {
+    try {
+        const parking = await Parking.findOne();
+        if (!parking) return res.status(404).json({ message: 'Parking lot not initialized.' });
 
-    // Find an available parking space
-    const availableSpace = await ParkingSpace.findOne({ isOccupied: false });
-    if (availableSpace) {
-      // Mark the parking space as occupied
-      availableSpace.isOccupied = true;
-      availableSpace.vehicleId = newVehicle._id;
-
-      // Save the parking space
-      await availableSpace.save();
-
-      // Assign the parking space to the vehicle
-      newVehicle.parkedAt = availableSpace._id;
+        res.status(200).json({
+            totalSpots: parking.totalSpots,
+            availableSpots: parking.slots.filter(slot => slot.status === 'empty').length,
+            vehicles: parking.vehicles,
+            slots: parking.slots,
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error.', error: error.message });
     }
+};
 
-    // Save the new vehicle
-    await newVehicle.save();
-
-    res.json({
-      message: 'Vehicle registered successfully!',
-      vehicle: newVehicle,
-      parkingSpace: availableSpace ? availableSpace : null,
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Error registering vehicle', error: err });
-  }
+module.exports = {
+    registerVehicle,
+    exitVehicle,
+    getParkingStatus,
 };

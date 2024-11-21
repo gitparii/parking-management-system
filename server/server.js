@@ -1,38 +1,56 @@
-const express=require("express");
+const express = require('express');
+const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const mongoose = require('mongoose');
-const connectDb=require("./config/dbConnection");
-const errorHandler = require("./middlewares/errorhandler");
-const userRoutes = require('./routes/userRoutes');
-const parkingRoutes=require('./routes/parkingRoutes');
-const dotenv = require("dotenv");
+require('dotenv').config();
 
+const connectDb = require('./config/dbConnection');
+const Parking = require('./models/parkingSpaceModel');
 
-dotenv.config();
-
-const app=express();
-const port=process.env.PORT || 5000;
-
-connectDb(); //jo service bnyi h use  call kra h 
+// Initialize Express app
+const app = express();
+const port = process.env.PORT || 5000;
 
 // Middleware
+app.use(cors());
 app.use(bodyParser.json());
 
-app.use(cors());
+// Connect to Database and Initialize Parking Lot
+connectDb().then(async () => {
+    try {
+        // Initialize Parking Lot if not exists
+        const existingParking = await Parking.findOne();
+        if (!existingParking) {
+            const slots = Array.from({ length: 10 }, (_, i) => ({
+                number: i + 1,
+                status: 'empty',
+            }));
 
-// Routes
-app.use('/api', userRoutes);
-// Use the parking routes
-app.use('/api/parking', parkingRoutes);
+            const newParkingLot = new Parking({
+                totalSpots: 10,
+                slots: slots,
+                vehicles: [],
+            });
 
-
-
-app.get('/',(req,res) => {
-    res.send("working");
+            await newParkingLot.save();
+            console.log('Parking lot initialized with 10 slots.');
+        } else {
+            console.log('Parking lot already exists.');
+        }
+    } catch (err) {
+        console.error('Error initializing parking lot:', err.message);
+    }
 });
 
-app.listen(port,() =>{
-    console.log(`server running on port http://localhost:${port}`);
-  });
+// Import Routes
+const authRoutes = require('./routes/userRoutes');
+const parkingRouter = require('./routes/parkingRoutes');
 
+// Routes
+app.use('/api/user', authRoutes);
+app.use('/api/parking', parkingRouter);
+
+// Start Server
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+});
