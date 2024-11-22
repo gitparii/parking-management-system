@@ -6,7 +6,7 @@ const vehicleSchema = new mongoose.Schema({
         required: true, 
         unique: true 
     },
-    owner: { 
+    userName: { 
         type: String, 
         required: true 
     },

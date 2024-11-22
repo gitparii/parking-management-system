@@ -45,10 +45,13 @@ connectDb().then(async () => {
 // Import Routes
 const authRoutes = require('./routes/userRoutes');
 const parkingRouter = require('./routes/parkingRoutes');
+const walletRouter = require('./routes/walletRouter');
 
 // Routes
 app.use('/api/user', authRoutes);
 app.use('/api/parking', parkingRouter);
+app.use('/api/wallet', walletRouter);
+
 
 // Start Server
 app.listen(port, () => {
